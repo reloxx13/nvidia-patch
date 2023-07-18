@@ -30,6 +30,10 @@ jobs:
             if [ "$variant" == "dch" ]; then
               variant="DCH"
             fi
+
+            echo "check_release_OS=$os" >> $GITHUB_ENV
+            echo "check_release_VARIANT=$variant" >> $GITHUB_ENV
+            echo "check_release_VERSION=$version" >> $GITHUB_ENV
           else
             echo "Invalid release name format. Must be in the format 'win-dch-123.45' or 'win-studio-123.45'"
             exit 1
@@ -52,9 +56,9 @@ jobs:
 
       - name: Run add_driver.py
         run: |
-          echo "Running add_driver.py with variant $variant and version ${{ env.check_release_VERSION }}"
+          echo "Running add_driver.py with variant ${{ env.check_release_VARIANT }} and version ${{ env.check_release_VERSION }}"
           cd "${{ github.workspace }}/tools/readme-autogen"
-          python add_driver.py -W -P GeForce --variant $variant -w win10 ${{ env.check_release_VERSION }}
+          python add_driver.py -W -P GeForce --variant ${{ env.check_release_VARIANT }} -w win10 ${{ env.check_release_VERSION }}
           echo "add_driver.py executed successfully"
 
       - name: Run readme_autogen.py
@@ -71,6 +75,6 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git commit -m "$os: add support for $variant driver ${{ env.check_release_VERSION }}"
+          git commit -m "$os: add support for ${{ env.check_release_VARIANT }} driver ${{ env.check_release_VERSION }}"
           git push origin master
           echo "Committed and pushed changes"
