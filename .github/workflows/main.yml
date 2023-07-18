@@ -41,21 +41,24 @@ jobs:
           python-version: '3.x'
 
       - name: Run autopatch.py
+        working-directory: ${{ github.workspace }}/win/tools/autopatch
         run: |
           echo "Running autopatch.py with version ${{ steps.check_release.outputs.version }}"
-          python "${{ github.workspace }}/win/tools/autopatch/autopatch.py" ${{ steps.check_release.outputs.version }}
+          python autopatch.py ${{ steps.check_release.outputs.version }}
           echo "autopatch.py executed successfully"
 
       - name: Run add_driver.py
+        working-directory: ${{ github.workspace }}/tools/readme-autogen
         run: |
           echo "Running add_driver.py with variant ${{ steps.check_release.outputs.variant }} and version ${{ steps.check_release.outputs.version }}"
-          python "${{ github.workspace }}/tools/readme-autogen/add_driver.py" -W -P GeForce --variant ${{ steps.check_release.outputs.variant }} -w win10 ${{ steps.check_release.outputs.version }}
+          python add_driver.py -W -P GeForce --variant ${{ steps.check_release.outputs.variant }} -w win10 ${{ steps.check_release.outputs.version }}
           echo "add_driver.py executed successfully"
 
       - name: Run readme_autogen.py
+        working-directory: ${{ github.workspace }}/tools/readme-autogen
         run: |
           echo "Running readme_autogen.py"
-          python "${{ github.workspace }}/tools/readme-autogen/readme_autogen.py"
+          python readme_autogen.py
           echo "readme_autogen.py executed successfully"
 
       - name: Delete exe files in /win/tools/autopatch/temp
@@ -65,11 +68,12 @@ jobs:
           echo "Deleted exe files in /win/tools/autopatch/temp"
 
       - name: Commit and push changes
+        working-directory: ${{ github.workspace }}
         run: |
           echo "Committing and pushing changes"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git commit -m "${{ steps.check_release.outputs.os }}: add support for ${{ steps.check_release.outputs.variant }} driver ${{ steps.check_release.outputs.version }}"
+          git commit -m "$os: add support for $variant driver $version"
           git push origin master
           echo "Committed and pushed changes"
