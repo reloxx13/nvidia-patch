@@ -206,17 +206,26 @@ def patch_flow(installer_file, search, replacement, target, target_name, patch_n
             installer_file = "https://international.download.nvidia.com/Windows/"+installer_file+"/"+filename
         else:  # installer_file is an url
             filename = os.path.basename(installer_file)
-            
+
+        
         # download installer and save in temp
-        with tempfile.TemporaryDirectory() as tempdir:
-            if not os.path.isfile(os.path.join(tempdir, filename)):  # check if file already downloaded
-                print(f"Downloading... ( {installer_file} TO {os.path.join(tempdir, filename)} )")
-                print("This may take a while (~800MB)")
-                urllib.request.urlretrieve(installer_file, os.path.join(tempdir, filename))
-                installer_file = os.path.join(tempdir, filename)
-            else:
-                installer_file = os.path.join(tempdir, filename)
-                print(f"Use downloaded file in `{installer_file}`")
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                file_path = os.path.join(tempdir, filename)
+        
+                if not os.path.isfile(file_path):  # check if file already downloaded
+                    print(f"Downloading... ({installer_file} TO {file_path})")
+                    print("This may take a while (~800MB)")
+                    urllib.request.urlretrieve(installer_file, file_path)
+                    print("Download completed successfully!")
+                else:
+                    print(f"Using downloaded file in '{file_path}'")
+        
+                installer_file = file_path
+        except urllib.error.URLError as e:
+            print(f"Failed to download the file: {e.reason}")
+        except Exception as e:
+            print(f"An error occurred during download: {str(e)}")
 
 
 
