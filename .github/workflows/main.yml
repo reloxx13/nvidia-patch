@@ -54,6 +54,13 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Delete Existing Files
+        run: |
+          echo "Deleting existing files if they exist"
+          rm -f "${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi64.1337"
+          rm -f "${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi.1337"
+          echo "Existing files deleted successfully"
+
       - name: Run autopatch.py
         run: |
           echo "Running autopatch.py with version ${{ env.check_release_VERSION }}"
@@ -90,8 +97,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi64.1337
-            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi.1337
+            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi64.1337:nvencodeapi64.1337
+            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi.1337:nvencodeapi.1337
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.event.release.tag_name }}
