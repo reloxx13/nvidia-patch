@@ -1,4 +1,4 @@
-name: Create patch
+name: CI
 
 on:
   release:
@@ -16,16 +16,19 @@ jobs:
           echo "Release Name: $release_name"
           if [[ $release_name =~ (win)-(dch|studio)-([0-9]+\.[0-9]+)(-.+)? ]]; then
             os="${BASH_REMATCH[1]}"
-            variant="${BASH_REMATCH[2]^^}"
+            variant="${BASH_REMATCH[2]}"
             version="${BASH_REMATCH[3]}"
             echo "Operating System: $os"
-            echo "::set-output name=variant::$variant"
-            echo "::set-output name=version::$version"
-            echo "::set-output name=os::$os"
+            echo "Variant: $variant"
+            echo "Version: $version"
 
             if [ "$os" != "win" ]; then
               echo "Not a Windows release. Stopping the CI workflow."
               exit 0
+            fi
+
+            if [ "$variant" == "dch" ]; then
+              variant="DCH"
             fi
           else
             echo "Invalid release name format. Must be in the format 'win-dch-123.45' or 'win-studio-123.45'"
@@ -41,40 +44,33 @@ jobs:
           python-version: '3.x'
 
       - name: Run autopatch.py
-        working-directory: ${{ github.workspace }}/win/tools/autopatch
         run: |
-          echo "Running autopatch.py with version ${{ steps.check_release.outputs.version }}"
-          mkdir -p temp
-          python autopatch.py ${{ steps.check_release.outputs.version }}
+          echo "Running autopatch.py with version ${{ env.check_release_VERSION }}"
+          cd "${{ github.workspace }}/win/tools/autopatch"
+          python autopatch.py ${{ env.check_release_VERSION }}
           echo "autopatch.py executed successfully"
 
       - name: Run add_driver.py
-        working-directory: ${{ github.workspace }}/tools/readme-autogen
         run: |
-          echo "Running add_driver.py with variant ${{ steps.check_release.outputs.variant }} and version ${{ steps.check_release.outputs.version }}"
-          python add_driver.py -W -P GeForce --variant ${{ steps.check_release.outputs.variant }} -w win10 ${{ steps.check_release.outputs.version }}
+          echo "Running add_driver.py with variant $variant and version ${{ env.check_release_VERSION }}"
+          cd "${{ github.workspace }}/tools/readme-autogen"
+          python add_driver.py -W -P GeForce --variant $variant -w win10 ${{ env.check_release_VERSION }}
           echo "add_driver.py executed successfully"
 
       - name: Run readme_autogen.py
-        working-directory: ${{ github.workspace }}/tools/readme-autogen
         run: |
           echo "Running readme_autogen.py"
+          cd "${{ github.workspace }}/tools/readme-autogen"
           python readme_autogen.py
           echo "readme_autogen.py executed successfully"
 
-      - name: Delete exe files in /win/tools/autopatch/temp
-        run: |
-          echo "Deleting exe files in /win/tools/autopatch/temp"
-          find "${{ github.workspace }}/win/tools/autopatch/temp" -name "*.exe" -type f -delete
-          echo "Deleted exe files in /win/tools/autopatch/temp"
-
       - name: Commit and push changes
-        working-directory: ${{ github.workspace }}
         run: |
           echo "Committing and pushing changes"
+          cd "${{ github.workspace }}"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git commit -m "$os: add support for $variant driver $version"
+          git commit -m "$os: add support for $variant driver ${{ env.check_release_VERSION }}"
           git push origin master
           echo "Committed and pushed changes"
