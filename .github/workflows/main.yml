@@ -89,7 +89,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git commit -m "$os: add support for ${{ env.check_release_VARIANT }} driver ${{ env.check_release_VERSION }}"
+          git diff --quiet --exit-code --cached || git commit -m "$os: add support for ${{ env.check_release_VARIANT }} driver ${{ env.check_release_VERSION }}"
           git push origin master
           echo "Committed and pushed changes"
 
