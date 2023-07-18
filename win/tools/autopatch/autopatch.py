@@ -208,14 +208,14 @@ def patch_flow(installer_file, search, replacement, target, target_name, patch_n
             filename = os.path.basename(installer_file)
             
         # download installer and save in temp
-        with tempfile.TemporaryDirectory() as tmpdir:
-            if not os.path.isfile(os.path.join(temp_dir, filename)):  # check if file already downloaded
-                print(f"Downloading... ( {installer_file} TO {os.path.join(temp_dir, filename)} )")
+        with tempfile.TemporaryDirectory() as tempdir:
+            if not os.path.isfile(os.path.join(tempdir, filename)):  # check if file already downloaded
+                print(f"Downloading... ( {installer_file} TO {os.path.join(tempdir, filename)} )")
                 print("This may take a while (~800MB)")
-                urllib.request.urlretrieve(installer_file, os.path.join(temp_dir, filename))
-                installer_file = os.path.join(temp_dir, filename)
+                urllib.request.urlretrieve(installer_file, os.path.join(tempdir, filename))
+                installer_file = os.path.join(tempdir, filename)
             else:
-                installer_file = os.path.join(temp_dir, filename)
+                installer_file = os.path.join(tempdir, filename)
                 print(f"Use downloaded file in `{installer_file}`")
 
 
