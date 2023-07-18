@@ -44,6 +44,7 @@ jobs:
         working-directory: ${{ github.workspace }}/win/tools/autopatch
         run: |
           echo "Running autopatch.py with version ${{ steps.check_release.outputs.version }}"
+          mkdir -p temp
           python autopatch.py ${{ steps.check_release.outputs.version }}
           echo "autopatch.py executed successfully"
 
