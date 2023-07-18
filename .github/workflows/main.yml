@@ -5,9 +5,14 @@ on:
     types:
       - created
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Check release name and OS
         id: check_release
@@ -82,17 +87,11 @@ jobs:
           echo "Committed and pushed changes"
 
       - name: Upload Patch Files
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: '${{ github.workspace }}/win/win10_x64/536.67/nvencodeapi64.1337'
-          asset_name: 'nvencodeapi64.1337'
-          asset_content_type: 'application/octet-stream'
-          
-      - name: Upload Patch Files
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: '${{ github.workspace }}/win/win10_x64/536.67/nvencodeapi.1337'
-          asset_name: 'nvencodeapi.1337'
-          asset_content_type: 'application/octet-stream'
+          files: |
+            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi64.1337
+            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi.1337
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
