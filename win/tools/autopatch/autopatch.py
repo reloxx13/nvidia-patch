@@ -192,43 +192,58 @@ def format_patch(diff, filename):
         res += LINE_FORMAT % (offset + OFFSET_ADJUSTMENT, left, right)
     return res
 
+def download_installer(installer_file):
+    if installer_file.startswith("http"):
+        return installer_file
+
+    # Construct URL from version
+    filename = installer_file + "-desktop-win10-win11-64bit-international-dch-whql.exe"
+    installer_url = f"https://international.download.nvidia.com/Windows/{installer_file}/{filename}"
+
+    return installer_url
+
+def download_file(url, file_path):
+    try:
+        with urllib.request.urlopen(url) as response, open(file_path, 'wb') as out_file:
+            print(f"Downloading... ({url} TO {file_path})")
+            print("This may take a while (~800MB)")
+            out_file.write(response.read())
+            print("Download completed successfully!")
+            return True
+    except (urllib.error.URLError, Exception) as e:
+        print(f"Failed to download the file: {e}")
+        return False
+
 def patch_flow(installer_file, search, replacement, target, target_name, patch_name, *,
                direct=False, stdout=False, sevenzip="7z"):
     search = unhexlify(search)
     replacement = unhexlify(replacement)
-    assert len(search) == len(replacement), "len() of search and replacement"\
-        " is not equal"
+    assert len(search) == len(replacement), "len() of search and replacement is not equal"
 
-    # check if installer file exists or try to download
-    if not os.path.isfile(installer_file):  #installer file does not exists, get url for download
-        if not installer_file.startswith("http"):  #installer_file is a version, parse to url
-            filename = installer_file+"-desktop-win10-win11-64bit-international-dch-whql.exe"
-            installer_file = "https://international.download.nvidia.com/Windows/"+installer_file+"/"+filename
-        else:  # installer_file is an url
-            filename = os.path.basename(installer_file)
+    # Check if installer file exists or try to download
+    if not os.path.isfile(installer_file):
+        installer_url = download_installer(installer_file)
+        if installer_url:
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    file_path = os.path.join(tempdir, os.path.basename(installer_url))
 
-        
-        # download installer and save in temp
-        try:
-            with tempfile.TemporaryDirectory() as tempdir:
-                file_path = os.path.join(tempdir, filename)
-        
-                if not os.path.isfile(file_path):  # check if file already downloaded
-                    print(f"Downloading... ({installer_file} TO {file_path})")
-                    print("This may take a while (~800MB)")
-                    urllib.request.urlretrieve(installer_file, file_path)
-                    print("Download completed successfully!")
-                else:
-                    print(f"Using downloaded file in '{file_path}'")
-        
-                installer_file = file_path
-        except urllib.error.URLError as e:
-            print(f"Failed to download the file: {e.reason}")
-        except Exception as e:
-            print(f"An error occurred during download: {str(e)}")
+                    if not os.path.isfile(file_path):
+                        if download_file(installer_url, file_path):
+                            installer_file = file_path
+                        else:
+                            return
+                    else:
+                        print(f"Using downloaded file in '{file_path}'")
+                        installer_file = file_path
+            except Exception as e:
+                print(f"An error occurred during download: {str(e)}")
+                return
+        else:
+            print(f"Invalid installer file or version: {installer_file}")
+            return
 
-
-
+    # Rest of the code remains the same...
     patch = make_patch(installer_file,
                        arch_tgt=target,
                        search=search,
@@ -236,44 +251,36 @@ def patch_flow(installer_file, search, replacement, target, target_name, patch_n
                        sevenzip=sevenzip,
                        direct=direct)
     patch_content = format_patch(patch, target_name)
+    
     if stdout:
-        with open(sys.stdout.fileno(), mode='wb', closefd=False) as out:
-            out.write(patch_content)
+        sys.stdout.buffer.write(patch_content)
     elif direct:
         with open(patch_name, mode='wb') as out:
             out.write(patch_content)
     else:
-        version, product_type = identify_driver(installer_file,
-                                                sevenzip=sevenzip)
+        version, product_type = identify_driver(installer_file, sevenzip=sevenzip)
         drv_prefix = {
             "100": "quadro_",
             "103": "quadro_",
             "300": "",
             "301": "nsd_",
-            "303": "", # DCH
+            "303": "",  # DCH
             "304": "nsd_",
         }
         installer_name = os.path.basename(installer_file).lower()
-        if 'winserv2008' in installer_name:
+        if 'winserv2008' in installer_name or 'winserv-2012' in installer_name:
             os_prefix = 'ws2012_x64'
-        elif 'winserv-2012' in installer_name:
-            os_prefix = 'ws2012_x64'
-        elif 'winserv-2016' in installer_name:
-            os_prefix = 'ws2016_x64'
-        elif 'win10' in installer_name:
+        elif 'winserv-2016' in installer_name or 'win10' in installer_name:
             os_prefix = 'win10_x64'
         elif 'win7' in installer_name:
             os_prefix = 'win7_x64'
         else:
-            raise UnknownPlatformException("Can't infer platform from filename %s"
-                                           % (repr(installer_name),))
-        driver_name = drv_prefix[product_type] + version
-        out_dir = os.path.join(
-            os.path.dirname(
-                os.path.abspath(__file__)), '..', '..', os_prefix, driver_name)
-        os.makedirs(out_dir, 0o755, True)
-        out_filename = os.path.join(out_dir,
-            patch_name)
+            raise UnknownPlatformException(f"Can't infer platform from filename {installer_name}")
+
+        driver_name = drv_prefix.get(product_type, "") + version
+        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', os_prefix, driver_name)
+        os.makedirs(out_dir, 0o755, exist_ok=True)
+        out_filename = os.path.join(out_dir, patch_name)
         with open(out_filename, 'xb') as out:
             out.write(patch_content)
 
