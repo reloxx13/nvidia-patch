@@ -221,13 +221,14 @@ def patch_flow(installer_file, search, replacement, target, target_name, patch_n
     assert len(search) == len(replacement), "len() of search and replacement is not equal"
 
     # Check if installer file exists or try to download
-    if not os.path.isfile(installer_file):
-        installer_url = download_installer(installer_file)
-        if installer_url:
-            try:
-                with tempfile.TemporaryDirectory() as tempdir:
+       
+    with tempfile.TemporaryDirectory() as tempdir:
+        if not os.path.isfile(installer_file):
+            installer_url = download_installer(installer_file)
+            if installer_url:
+                try:
                     file_path = os.path.join(tempdir, os.path.basename(installer_url))
-
+    
                     if not os.path.isfile(file_path):
                         if download_file(installer_url, file_path):
                             installer_file = file_path
@@ -236,53 +237,53 @@ def patch_flow(installer_file, search, replacement, target, target_name, patch_n
                     else:
                         print(f"Using downloaded file in '{file_path}'")
                         installer_file = file_path
-            except Exception as e:
-                print(f"An error occurred during download: {str(e)}")
+                except Exception as e:
+                    print(f"An error occurred during download: {str(e)}")
+                    return
+            else:
+                print(f"Invalid installer file or version: {installer_file}")
                 return
-        else:
-            print(f"Invalid installer file or version: {installer_file}")
-            return
-
-    # Rest of the code remains the same...
-    patch = make_patch(installer_file,
-                       arch_tgt=target,
-                       search=search,
-                       replacement=replacement,
-                       sevenzip=sevenzip,
-                       direct=direct)
-    patch_content = format_patch(patch, target_name)
     
-    if stdout:
-        sys.stdout.buffer.write(patch_content)
-    elif direct:
-        with open(patch_name, mode='wb') as out:
-            out.write(patch_content)
-    else:
-        version, product_type = identify_driver(installer_file, sevenzip=sevenzip)
-        drv_prefix = {
-            "100": "quadro_",
-            "103": "quadro_",
-            "300": "",
-            "301": "nsd_",
-            "303": "",  # DCH
-            "304": "nsd_",
-        }
-        installer_name = os.path.basename(installer_file).lower()
-        if 'winserv2008' in installer_name or 'winserv-2012' in installer_name:
-            os_prefix = 'ws2012_x64'
-        elif 'winserv-2016' in installer_name or 'win10' in installer_name:
-            os_prefix = 'win10_x64'
-        elif 'win7' in installer_name:
-            os_prefix = 'win7_x64'
+        # Rest of the code remains the same...
+        patch = make_patch(installer_file,
+                           arch_tgt=target,
+                           search=search,
+                           replacement=replacement,
+                           sevenzip=sevenzip,
+                           direct=direct)
+        patch_content = format_patch(patch, target_name)
+        
+        if stdout:
+            sys.stdout.buffer.write(patch_content)
+        elif direct:
+            with open(patch_name, mode='wb') as out:
+                out.write(patch_content)
         else:
-            raise UnknownPlatformException(f"Can't infer platform from filename {installer_name}")
-
-        driver_name = drv_prefix.get(product_type, "") + version
-        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', os_prefix, driver_name)
-        os.makedirs(out_dir, 0o755, exist_ok=True)
-        out_filename = os.path.join(out_dir, patch_name)
-        with open(out_filename, 'xb') as out:
-            out.write(patch_content)
+            version, product_type = identify_driver(installer_file, sevenzip=sevenzip)
+            drv_prefix = {
+                "100": "quadro_",
+                "103": "quadro_",
+                "300": "",
+                "301": "nsd_",
+                "303": "",  # DCH
+                "304": "nsd_",
+            }
+            installer_name = os.path.basename(installer_file).lower()
+            if 'winserv2008' in installer_name or 'winserv-2012' in installer_name:
+                os_prefix = 'ws2012_x64'
+            elif 'winserv-2016' in installer_name or 'win10' in installer_name:
+                os_prefix = 'win10_x64'
+            elif 'win7' in installer_name:
+                os_prefix = 'win7_x64'
+            else:
+                raise UnknownPlatformException(f"Can't infer platform from filename {installer_name}")
+    
+            driver_name = drv_prefix.get(product_type, "") + version
+            out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', os_prefix, driver_name)
+            os.makedirs(out_dir, 0o755, exist_ok=True)
+            out_filename = os.path.join(out_dir, patch_name)
+            with open(out_filename, 'xb') as out:
+                out.write(patch_content)
 
 
 def main():
