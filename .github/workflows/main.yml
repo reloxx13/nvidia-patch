@@ -97,8 +97,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi64.1337:nvencodeapi64.1337
-            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi.1337:nvencodeapi.1337
+            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi64.1337
+            ${{ github.workspace }}/win/win10_x64/${{ env.check_release_VERSION }}/nvencodeapi.1337
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.event.release.tag_name }}
